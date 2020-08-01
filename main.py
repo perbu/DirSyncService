@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import uvicorn
 from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException
 from starlette.responses import FileResponse
 import logging
@@ -9,10 +12,10 @@ import os
 from os.path import isfile
 
 chunk_size = 8192
-target_folder = "folder/"
+target_folder = "target/"
 
 app = FastAPI()
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 @app.get("/")
@@ -62,3 +65,6 @@ async def delete(filename: str):
     os.remove(target_file)
     return {"file removed": target_file}
 
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=5000, log_level="info")

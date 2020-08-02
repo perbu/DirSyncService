@@ -90,7 +90,7 @@ class FileEventHandler(object):
         filename = basename(filename)
         url = self.baseUrl + 'upload_chunk/' + filename + '/' + str(block)
         r = requests.post(url, data=content)
-        logging.info(f'Sending block {block} on file {filename} with len {len(content)}: {r.text}')
+        logging.info    (f'Sending block {block} on file {filename} with len {len(content)}: {r.text}')
 
     def incremental_send(self, filename: str, blocks: list):
         logging.info(f"Doing incremental change on {filename}")
@@ -113,8 +113,6 @@ class FileEventHandler(object):
         url = self.baseUrl + 'delete/' + file
         r = requests.get(url)
         logging.info(f"Deleteing file {file}: {r.text}")
-
-
 
 def read_in_chunks(file_object, chunk_size=8192):
     """Generator to read a file piece by piece.

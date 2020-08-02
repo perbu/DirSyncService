@@ -1,15 +1,21 @@
 #!/usr/bin/env python
-import click
-import requests
-import logging
-from watchdog.observers import Observer
-import json
 
+"""
+  dirsync client
+  This takes a folder as parameter and keeps it in sync on the server side.
+  PoC.
+
+"""
+
+
+import logging
+from time import sleep
+import click
+from watchdog.observers import Observer
 from filehandler import FileEventHandler
 
-from time import sleep
-
 logging.basicConfig(level=logging.INFO)
+
 
 @click.command()
 @click.option('--folder', default='source',
@@ -17,6 +23,8 @@ logging.basicConfig(level=logging.INFO)
 @click.option('--baseurl', default='http://localhost:8000/',
               help='Baseurl for the sync service')
 def main(folder, baseurl):
+    """ main is invoked through click """
+
     observer = Observer()
     observer.schedule(FileEventHandler(baseurl=baseurl, chunk_size=8192),
                       folder, recursive=False)
@@ -30,8 +38,6 @@ def main(folder, baseurl):
 
     observer.join()
     print("Exiting.")
-
-
 
 
 if __name__ == "__main__":

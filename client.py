@@ -12,7 +12,7 @@ import logging
 from time import sleep
 import click
 from watchdog.observers import Observer
-from filehandler import FileEventHandler
+from filehandler import FileEventHandler # all the logic is in here.
 
 logging.basicConfig(level=logging.INFO)
 

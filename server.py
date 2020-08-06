@@ -55,7 +55,7 @@ async def exists(filename: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "file found"}
 
-
+# todo: --> post
 @app.get("/truncate/{filename}/{lenght}")
 async def truncate(filename: str, lenght: int):
     """ Truncate, typically used after incremental transfer to remove
@@ -69,9 +69,10 @@ async def truncate(filename: str, lenght: int):
 
 
 @app.post("/upload/", status_code=200)
-async def create_upload_file(response: Response, file: UploadFile = File(...)):
+async def upload_file(response: Response, file: UploadFile = File(...)):
     """ upload a whole file. """
     await file.seek(0)  # Not sure we need to seek, doesn't hurt.
+    logging.info(f'opening {file.filename} for writing...')
     async with aiofiles.open(target_folder + file.filename, 'wb') as target:
         chunk = await file.read(chunk_size)
         while chunk:
@@ -85,7 +86,7 @@ async def create_upload_file(response: Response, file: UploadFile = File(...)):
 
 
 @app.post("/upload_chunk/{filename}/{cid}", status_code=200)
-async def chunks(filename: str, cid: int, request: Request):
+async def upload_chunks(filename: str, cid: int, request: Request):
     """ recieve a chunk of a file as part of an incremental transfer """
 
     chunk_content = await request.body()
@@ -106,7 +107,7 @@ async def download(filename: str):
     response = FileResponse(path=target_folder + filename, filename=filename)
     return response
 
-
+# todo: --> post
 @app.get("/delete/{filename}")
 async def delete(filename: str):
     """ delete a file. """
@@ -115,7 +116,6 @@ async def delete(filename: str):
         raise HTTPException(status_code=404, detail="Item not found")
     os.remove(target_file)
     return {"file removed": target_file}
-
 
 if __name__ == "__main__":
     if not isdir(target_folder):

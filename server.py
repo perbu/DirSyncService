@@ -2,12 +2,13 @@
 import logging
 from hashlib import sha256
 import os
+import uuid
 from os.path import isfile, isdir
 import uvicorn
 import aiofiles
 from starlette.responses import FileResponse
 from fastapi import FastAPI, File, UploadFile, Response, Request, status, HTTPException
-
+import click 
 
 chunk_size = 8192
 target_folder = "target/"
@@ -23,7 +24,10 @@ async def root():
 
 @app.get("/checksum/{filename}")
 async def checksum(filename: str, response: Response):
-    """ Get checksum of the target """
+    """ Get checksum of the target.
+    likely io-bound. 
+    could be split in two operations at the cost of less CPU but more IO.
+    """
     target_file = target_folder + filename
     if not isfile(target_file):
         raise HTTPException(status_code=404, detail="Item not found")
@@ -66,6 +70,7 @@ async def truncate(filename: str, lenght: int):
 
 @app.post("/upload/", status_code=200)
 async def create_upload_file(response: Response, file: UploadFile = File(...)):
+    """ upload a whole file. """
     await file.seek(0)  # Not sure we need to seek, doesn't hurt.
     async with aiofiles.open(target_folder + file.filename, 'wb') as target:
         chunk = await file.read(chunk_size)
@@ -81,6 +86,8 @@ async def create_upload_file(response: Response, file: UploadFile = File(...)):
 
 @app.post("/upload_chunk/{filename}/{cid}", status_code=200)
 async def chunks(filename: str, cid: int, request: Request):
+    """ recieve a chunk of a file as part of an incremental transfer """
+
     chunk_content = await request.body()
     logging.info(
         f'Overwriting chunk (len:{len(chunk_content)}) file {filename} at offset {cid * chunk_size}')
@@ -92,6 +99,7 @@ async def chunks(filename: str, cid: int, request: Request):
 
 @app.get("/download/{filename}")
 async def download(filename: str):
+    """ send a whole file """
     target_file = target_folder + filename
     if not isfile(target_file):
         raise HTTPException(status_code=404, detail="Item not found")
@@ -101,6 +109,7 @@ async def download(filename: str):
 
 @app.get("/delete/{filename}")
 async def delete(filename: str):
+    """ delete a file. """
     target_file = target_folder + filename
     if not isfile(target_file):
         raise HTTPException(status_code=404, detail="Item not found")
@@ -113,3 +122,6 @@ if __name__ == "__main__":
         logging.error('Target folder "target_folder"')
     uvicorn.run("server:app", host="127.0.0.1",
                 port=8000, log_level="info", reload=True)
+
+
+

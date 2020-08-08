@@ -5,28 +5,31 @@ import logging
 import requests
 from hashlib import sha256
 
-
 class FileEventHandler(object):
     """ EventHandler class for watchdog.
     Contains method for interacting with the server.
     Gets event and fires of client.
     """
 
-    def __init__(self, baseurl, chunk_size):
+    def __init__(self, baseurl, chunk_size, folder):
         self.baseUrl = baseurl
         self.chunkSize = chunk_size
+        self.folder = folder
 
     # Entrypoint
     def dispatch(self, event: FileSystemEvent):
         if isinstance(event, FileCreatedEvent) or isinstance(event, FileModifiedEvent):
-            file = event.src_path
-            if self.remote_exists(basename(file)):
+            file = basename(event.src_path)
+            if self.remote_exists(file):
                 local_cs = self.get_local_checksum(file)
                 remote_cs = self.get_remote_checksum(file)
                 changed_blocks = self.compare(local_cs, remote_cs)
-                self.incremental_send(file, changed_blocks)
-                self.truncate(file, stat(file).st_size)
+                if changed_blocks:
+                    logging.info("File changed - doing incremental change")
+                    self.incremental_send(file, changed_blocks)
+                    self.truncate(file, stat(self.folder + file).st_size)
             else:
+                logging.info("Sending new file")
                 self.send_file(file)
         elif isinstance(event, FileDeletedEvent):
             logging.info("File deleted")
@@ -63,15 +66,15 @@ class FileEventHandler(object):
             return False
 
     def truncate(self, filename, lenght):
+        filename = filename
         print(f"Truncating {filename} to {lenght}")
-        url = self.baseUrl + 'truncate/' + \
-            basename(filename) + '/' + str(lenght)
-        requests.get(url)
+        url = self.baseUrl + 'truncate/'
+        requests.post(url, json={'filename': filename, 'lenght': lenght})
 
     def get_local_checksum(self, filename):
         cs_whole = sha256()
         chunk_checksums = []
-        with open(filename, 'rb') as fh:
+        with open(self.folder + filename, 'rb') as fh:
             for chunk in read_in_chunks(fh, chunk_size=self.chunkSize):
                 cs_whole.update(chunk)
                 cs_chunk = sha256()
@@ -90,12 +93,13 @@ class FileEventHandler(object):
         filename = basename(filename)
         url = self.baseUrl + 'upload_chunk/' + filename + '/' + str(block)
         r = requests.post(url, data=content)
-        logging.info    (f'Sending block {block} on file {filename} with len {len(content)}: {r.text}')
+        logging.debug(f'Sending block {block} on file {filename} with len {len(content)}: {r.text}')
 
     def incremental_send(self, filename: str, blocks: list):
-        logging.info(f"Doing incremental change on {filename}")
-        logging.info(f"Changed blocks: {blocks}")
-        with open(filename, 'rb') as fh:
+        local_file = self.folder + filename
+        logging.info(f"Doing incremental change on {local_file}")
+        logging.debug(f"Changed blocks: {blocks}")
+        with open(local_file, 'rb') as fh:
             for block in blocks:
                 fh.seek(block * self.chunkSize)
                 content = fh.read(self.chunkSize)
@@ -104,14 +108,14 @@ class FileEventHandler(object):
 
     def send_file(self, file: str):
         url = self.baseUrl + 'upload/'
-        with open(file, 'rb') as fh:
+        with open(self.folder + file, 'rb') as fh:
             files = {'file': fh}
             r = requests.post(url, files=files)
             logging.info(f"Sending file {file}: {r.text}")
 
     def delete_file(self, file: str):
-        url = self.baseUrl + 'delete/' + file
-        r = requests.get(url)
+        url = self.baseUrl + 'delete/'
+        r = requests.post(url, json={'filename' : file})
         logging.info(f"Deleteing file {file}: {r.text}")
 
 def read_in_chunks(file_object, chunk_size=8192):

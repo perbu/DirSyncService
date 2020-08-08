@@ -9,6 +9,8 @@ import aiofiles
 from starlette.responses import FileResponse
 from fastapi import FastAPI, File, UploadFile, Response, Request, status, HTTPException
 import click 
+from pydantic import BaseModel
+
 
 chunk_size = 8192
 target_folder = "target/"
@@ -16,6 +18,14 @@ target_folder = "target/"
 app = FastAPI()                             # this is what uvicorn looks for...
 logging.basicConfig(level=logging.INFO)
 
+# Forms for the post operations.
+
+class DeleteForm(BaseModel):
+    filename: str
+
+class TruncateForm(BaseModel):
+    filename: str
+    lenght: int
 
 @app.get("/")
 async def root():
@@ -55,17 +65,17 @@ async def exists(filename: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "file found"}
 
-# todo: --> post
-@app.get("/truncate/{filename}/{lenght}")
-async def truncate(filename: str, lenght: int):
+@app.post("/truncate/")
+async def truncate(form: TruncateForm):
     """ Truncate, typically used after incremental transfer to remove
     any bytes if the file has shrunk"""
-    target_file = target_folder + filename
+    target_file = target_folder + form.filename
+    logging.info(f'Truncating file {target_file}')
     if not isfile(target_file):
         raise HTTPException(status_code=404, detail="Item not found")
     async with aiofiles.open(target_file, 'a') as target:
-        await target.truncate(lenght)
-    return {"truncate": lenght}
+        await target.truncate(form.lenght)
+    return {"truncate": form.lenght}
 
 
 @app.post("/upload/", status_code=200)
@@ -107,11 +117,11 @@ async def download(filename: str):
     response = FileResponse(path=target_folder + filename, filename=filename)
     return response
 
-# todo: --> post
-@app.get("/delete/{filename}")
-async def delete(filename: str):
+@app.post("/delete/")
+async def delete(form: DeleteForm):
     """ delete a file. """
-    target_file = target_folder + filename
+    target_file = target_folder + form.filename
+    logging.info(f'Deleting file {target_file}')
     if not isfile(target_file):
         raise HTTPException(status_code=404, detail="Item not found")
     os.remove(target_file)

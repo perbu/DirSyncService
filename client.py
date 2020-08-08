@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 @click.command()
-@click.option('--folder', default='source',
+@click.option('--folder', default='source/',
               help='The folder to monitor.')
 @click.option('--baseurl', default='http://localhost:8000/',
               help='Baseurl for the sync service')
@@ -26,7 +26,7 @@ def main(folder, baseurl):
     """ main is invoked through click """
 
     observer = Observer()
-    observer.schedule(FileEventHandler(baseurl=baseurl, chunk_size=8192),
+    observer.schedule(FileEventHandler(baseurl=baseurl, chunk_size=8192, folder=folder),
                       folder, recursive=False)
     observer.start()
     print(f"Monitoring folder {folder}")

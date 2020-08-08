@@ -7,18 +7,17 @@ from hashlib import sha256
 import os
 import warnings
 import io
+import logging
 
 testfilenamepattern = 'testfile'
 client = TestClient(app)
 # aiofiles generates a lot of warnings:
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-
 def generate_testdata(size=70000, seed=31337):
     random.seed(seed)
     lst = [random.randint(30, 250) for i in range(size)]
     return bytes(lst)
-
 
 def setup_module(module):
     print(f"Setting up tests in {module}")
@@ -30,8 +29,9 @@ def setup_module(module):
 
 
 def teardown_module(module):
-    pass
-    # os.remove(testfile1)
+    # the third file is deleted during the tests.
+    for i in range(2):
+        os.remove(f'target/{testfilenamepattern}_{i}')
 
 
 def test_read_main():
@@ -100,11 +100,13 @@ def test_incremental_upd():
 
 def test_truncate():
     target_size = 50000
-    response = client.get(f'/truncate/{testfilenamepattern}_1/50000')
+    response = client.post(f'/truncate/', json={'filename': f'{testfilenamepattern}_1', 'lenght':50000})
     assert response.status_code == 200
 
     actual_size = os.stat(f'target/{testfilenamepattern}_1').st_size
     assert actual_size == target_size
+    logging.basicConfig(level=logging.WARN)
+
 
 def test_upload_and_download():
     testfilename = f'{testfilenamepattern}_3'
@@ -120,8 +122,7 @@ def test_upload_and_download():
 def test_delete():
     filename = f'{testfilenamepattern}_2'
     print(f"Deleteing file {filename}")
-    response = client.get(f'/delete/{filename}')
+    response = client.post(f'/delete/', json={ 'filename': filename })
     assert response.status_code == 200
-    
     assert os.path.isfile('target/{testfilenamepattern}_2') == False
 

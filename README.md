@@ -3,7 +3,7 @@
 ## How to run server component
 1. pip install poetry
 2. poetry install
-3. poetry run ./server.py
+3. poetry run ./server.py --help for option
 
 ## How to run client
 Same but run client.py. --help for option.
@@ -12,6 +12,4 @@ Same but run client.py. --help for option.
  - no sync on startup
  - little error recovery
  - no locking
-
-
-
+ 

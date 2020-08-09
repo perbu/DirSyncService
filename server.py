@@ -163,4 +163,5 @@ def main(folder, chunksize):
                 port=8000, log_level="info", reload=True)
 
 if __name__ == "__main__":
-    cProfile.run('main()')
+    # cProfile.run('main()')
+    main()

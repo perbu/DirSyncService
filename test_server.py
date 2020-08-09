@@ -126,3 +126,9 @@ def test_delete():
     assert response.status_code == 200
     assert os.path.isfile('target/{testfilenamepattern}_2') == False
 
+def test_settings():
+    response = client.get('/info')
+    assert response.status_code == 200
+    j = response.json()
+    assert j["chunksize"] == 8192
+    assert j["folder"] == "target/"

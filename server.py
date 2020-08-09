@@ -19,14 +19,12 @@ class Settings(BaseSettings):
 
 
 app = FastAPI()
-# this is what uvicorn looks for...
 settings = Settings()
 logging.basicConfig(level=logging.INFO)
 
-
+# form definitions for input. 
 class DeleteForm(BaseModel):
     filename: str
-
 
 class TruncateForm(BaseModel):
     filename: str
@@ -50,7 +48,6 @@ async def checksum(filename: str, response: Response):
     cs_whole_file = sha256()
     checksum_chunks = []
     async with aiofiles.open(target_file, 'rb') as file:
-        # AIOFile is stateless but provides this helper class:
         chunk = await file.read(settings.chunksize)
         while chunk:
             cs_whole_file.update(chunk)  # checksum for the whole file.
@@ -87,7 +84,7 @@ async def truncate(form: TruncateForm):
 
 @app.post("/upload/", status_code=200)
 async def upload_file(response: Response, file: UploadFile = File(...)):
-    """ upload a whole file. """
+    """ upload a whole file. We get a file-like object which might be on disk. """
     await file.seek(0)  # Not sure we need to seek, doesn't hurt.
     logging.info(f'opening {file.filename} for writing...')
     async with aiofiles.open(settings.folder + file.filename, 'wb') as target:
